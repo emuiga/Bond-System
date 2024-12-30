@@ -96,6 +96,7 @@ interface MembershipContextType {
   saveProgress: () => void;
   resetForm: () => void;
   stepStatuses: { [key: number]: StepStatus };
+  applicationStatus: 'not_started' | 'in_progress' | 'under_review' | 'approved' | 'rejected';
 }
 
 const INITIAL_STATE: CompanyDetails = {
@@ -162,6 +163,7 @@ export function MembershipProvider({ children }: { children: ReactNode }) {
     6: { completed: false, active: false },
     7: { completed: false, active: false },
   });
+  const [applicationStatus, setApplicationStatus] = useState<'not_started' | 'in_progress' | 'under_review' | 'approved' | 'rejected'>('not_started')
 
   const updateCompanyDetails = (details: Partial<CompanyDetails>) => {
     setCompanyDetails(prev => ({ ...prev, ...details }))
@@ -188,7 +190,8 @@ export function MembershipProvider({ children }: { children: ReactNode }) {
       updateCompanyDetails,
       saveProgress,
       resetForm,
-      stepStatuses
+      stepStatuses,
+      applicationStatus
     }}>
       {children}
     </MembershipContext.Provider>

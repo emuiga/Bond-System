@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/button"
 import { X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
+import { useKeycloakUser } from '@/app/hooks/useKeycloakUser'
 
 export default function MembershipWelcome() {
   const router = useRouter()
-
+  const { displayName } = useKeycloakUser()
+  
   const handleStart = () => {
     router.push('/membership/step-1')
   }
@@ -19,7 +21,7 @@ export default function MembershipWelcome() {
       <Card className="max-w-4xl w-full overflow-hidden">
         <div className="flex flex-col md:flex-row">
           <div className="md:w-1/2">
-            <Image 
+            <Image
               src="/shipping-containers.jpg" 
               alt="Shipping containers" 
               width={600}
@@ -34,9 +36,9 @@ export default function MembershipWelcome() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            
+
             <div className="mt-6 space-y-4">
-              <p className="text-gray-600">Hey muiga,</p>
+              <p className="text-gray-600">Hey {displayName},</p>
               
               <p className="text-gray-600">
                 Becoming a member of our Association means joining a network of 

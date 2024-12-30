@@ -5,9 +5,11 @@ import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Info, User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useKeycloakUser } from '@/app/hooks/useKeycloakUser';
 
 const DashboardPage = () => {
   const router = useRouter();
+  const { displayName } = useKeycloakUser();
   
   const handleProfileClick = () => {
     router.push('/membership');
@@ -33,9 +35,8 @@ const DashboardPage = () => {
 
   return (
     <div className="p-6 max-w-[1200px] mx-auto">
-      {/* Header Section */}
       <div className="mb-8">
-        <h1 className="text-2xl font-semibold mb-2">Hello Jayden</h1>
+        <h1 className="text-2xl font-semibold mb-2">Hello {displayName}</h1>
         <p className="text-gray-600 text-sm">
           Easily manage your bonds, payments, certifications, and compliance all in one place.
         </p>
@@ -43,15 +44,11 @@ const DashboardPage = () => {
 
       {/* Profile Completion Alert */}
       <div className="bg-blue-200 p-4 rounded-lg mb-8 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="bg-blue-300 p-2 rounded-full">
-            <span className="text-blue-600 text-sm">0%</span>
-          </div>
+        <div className="flex items-center gap-4">
+          <User className="h-5 w-5" />
           <div>
-            <h3 className="font-medium mb-1">Complete your Profile</h3>
-            <p className="text-xs text-gray-600">
-              Please complete your profile to be able to access the rest of the portal.
-            </p>
+            <h3 className="font-medium">Complete Your Profile</h3>
+            <p className="text-sm">Fill in your details to start using the platform</p>
           </div>
         </div>
         <Button 
@@ -59,7 +56,7 @@ const DashboardPage = () => {
           className="bg-blue-600 hover:bg-blue-700"
           onClick={handleProfileClick}
         >
-          Complete Your Profile
+          Complete Profile
         </Button>
       </div>
 
@@ -89,7 +86,7 @@ const DashboardPage = () => {
             </div>
           </div>
           <h3 className="text-xl font-semibold mb-2">You're almost there!</h3>
-          <p className="text-gray-600 mb-6 max-w-md mx-auto  text-sm">
+          <p className="text-gray-600 mb-6 max-w-md mx-auto text-sm">
             Finish setting up your account to access all features, including bond management,
             payments, and document uploads.
           </p>
