@@ -1,109 +1,115 @@
 'use client'
 
-import { useState } from 'react'
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState, useEffect } from 'react'
+import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Check, Plus, X } from 'lucide-react'
+import { Label } from "@/components/ui/label"
+import { useRouter } from 'next/navigation'
+import { StepIndicator } from '@/components/StepIndicator'
 import { useMembership } from '@/contexts/membership-context'
+import { X, Plus, Trash2 } from 'lucide-react'
 
 interface Shareholder {
-  id: string
-  name: string
-  kraPin: string
+  id: number;
+  name: string;
+  kraPinNumber: string;
+  nationality: string;
+  shares: string;
 }
 
-export default function ShareholderDetailsStep() {
-  const { 
-    stepStatuses, 
-    goToNextStep 
-  } = useMembership()
+const DEFAULT_SHAREHOLDER: Shareholder = {
+  id: 1,
+  name: '',
+  kraPinNumber: '',
+  nationality: '',
+  shares: ''
+};
 
-  const [hasShareholders, setHasShareholders] = useState<string>("no")
-  const [shareholders, setShareholders] = useState<Shareholder[]>([])
+export default function ShareholderDetailsStep() {
+  const router = useRouter()
+  const { companyDetails, updateCompanyDetails, saveProgress, setCurrentStep } = useMembership()
+  const [hasShareholders, setHasShareholders] = useState<boolean>(false)
+  const [shareholders, setShareholders] = useState<Shareholder[]>([DEFAULT_SHAREHOLDER])
+
+  useEffect(() => {
+    setCurrentStep(5)
+  }, [setCurrentStep])
+
+  const handleShareholderChange = (index: number, field: keyof Shareholder, value: string) => {
+    const updatedShareholders = shareholders.map((shareholder, i) => {
+      if (i === index) {
+        return { ...shareholder, [field]: value }
+      }
+      return shareholder
+    })
+    setShareholders(updatedShareholders)
+    updateCompanyDetails({ shareholders: updatedShareholders })
+  }
 
   const addShareholder = () => {
-    setShareholders([...shareholders, { 
-      id: `shareholder-${shareholders.length + 1}`,
-      name: '',
-      kraPin: ''
-    }])
+    const newShareholder = {
+      ...DEFAULT_SHAREHOLDER,
+      id: shareholders.length + 1,
+    }
+    setShareholders([...shareholders, newShareholder])
   }
 
-  const updateShareholder = (id: string, field: keyof Shareholder, value: string) => {
-    setShareholders(shareholders.map(sh => 
-      sh.id === id ? { ...sh, [field]: value } : sh
-    ))
+  const removeShareholder = (index: number) => {
+    if (shareholders.length > 1) {
+      const updatedShareholders = shareholders.filter((_, i) => i !== index)
+      setShareholders(updatedShareholders)
+      updateCompanyDetails({ shareholders: updatedShareholders })
+    }
   }
 
-  const steps = [
-    { number: 1, title: 'Company Details' },
-    { number: 2, title: 'Attach Company Documents' },
-    { number: 3, title: 'Directors\' Details' },
-    { number: 4, title: 'Staff\'s Details' },
-    { number: 5, title: 'Shareholder/Partner Details' },
-    { number: 6, title: 'Referees and Declaration' },
-    { number: 7, title: 'Make Payment' }
-  ]
+  const handleNext = () => {
+    saveProgress()
+    router.push('/membership/step-6')
+  }
+
+  const handleBack = () => {
+    saveProgress()
+    router.push('/membership/step-4')
+  }
+
+  const handleCancel = () => {
+    if (confirm('Are you sure you want to exit? Your progress will be saved.')) {
+      saveProgress()
+      router.push('/dashboard')
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">
       <Card className="mx-auto max-w-6xl">
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Membership Application</CardTitle>
-          <Button variant="ghost" size="icon">
-            <X className="h-4 w-4" />
+          <CardTitle>Shareholder/Partner Details</CardTitle>
+          <Button variant="ghost" size="icon" onClick={handleCancel}>
+            <X className="h-5 w-5" />
           </Button>
         </CardHeader>
-        <CardContent className="flex gap-8">
-          {/* Steps Sidebar */}
-          <div className="w-64 shrink-0">
-            <div className="space-y-1">
-              {steps.map((step) => (
-                <div
-                  key={step.number}
-                  className={`flex items-center gap-3 rounded-lg p-3 text-sm ${
-                    stepStatuses[step.number]?.active ? 'bg-blue-50 text-blue-600' :
-                    stepStatuses[step.number]?.completed ? 'text-blue-600' : 'text-gray-500'
-                  }`}
-                >
-                  <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
-                    stepStatuses[step.number]?.completed ? 'bg-blue-600 text-white' :
-                    stepStatuses[step.number]?.active ? 'border-2 border-blue-600 text-blue-600' :
-                    'border-2 border-gray-300'
-                  }`}>
-                    {stepStatuses[step.number]?.completed ? (
-                      <Check className="h-4 w-4" />
-                    ) : (
-                      step.number
-                    )}
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="font-medium">Step {step.number}</span>
-                    <span className="text-xs">{step.title}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Main Content */}
-          <div className="flex-1">
-            <h2 className="mb-6 text-xl font-semibold">Shareholder/Partner Details</h2>
-            <div className="space-y-6">
-              <div className="space-y-2">
+        <CardContent>
+          <div className="flex gap-8">
+            <StepIndicator currentStep={5} />
+            
+            <div className="flex-1 space-y-6">
+              <div>
                 <Label>Do you have any shareholder/partner?</Label>
-                <RadioGroup 
-                  value={hasShareholders} 
+                <RadioGroup
+                  value={hasShareholders ? "yes" : "no"}
                   onValueChange={(value) => {
-                    setHasShareholders(value)
-                    if (value === 'yes' && shareholders.length === 0) {
-                      addShareholder()
+                    setHasShareholders(value === "yes")
+                    if (value === "no") {
+                      setShareholders([])
+                      updateCompanyDetails({ shareholders: [] })
+                    } else {
+                      setShareholders([DEFAULT_SHAREHOLDER])
+                      updateCompanyDetails({ shareholders: [DEFAULT_SHAREHOLDER] })
                     }
                   }}
-                  className="flex gap-4"
+                  className="flex gap-4 mt-2 [&_[data-state=checked]]:bg-blue-600 [&_[data-state=checked]]:border-blue-600"
                 >
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="yes" id="yes" />
@@ -116,47 +122,101 @@ export default function ShareholderDetailsStep() {
                 </RadioGroup>
               </div>
 
-              {hasShareholders === 'yes' && (
-                <div className="space-y-4">
-                  {shareholders.map((shareholder) => (
-                    <div key={shareholder.id} className="grid gap-4 md:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor={`${shareholder.id}-name`}>Shareholder's Name</Label>
-                        <Input 
-                          id={`${shareholder.id}-name`}
-                          value={shareholder.name}
-                          onChange={(e) => updateShareholder(shareholder.id, 'name', e.target.value)}
-                          placeholder="Enter shareholder's name"
-                        />
+              {hasShareholders && (
+                <>
+                  {shareholders.map((shareholder, index) => (
+                    <div key={shareholder.id} className="space-y-4 p-4 border rounded-lg">
+                      <div className="flex justify-between items-center">
+                        <h3 className="text-lg font-medium">Shareholder {index + 1}</h3>
+                        {shareholders.length > 1 && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeShareholder(index)}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        )}
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor={`${shareholder.id}-kra`}>KRA PIN Number</Label>
-                        <Input 
-                          id={`${shareholder.id}-kra`}
-                          value={shareholder.kraPin}
-                          onChange={(e) => updateShareholder(shareholder.id, 'kraPin', e.target.value)}
-                          placeholder="Enter KRA PIN number"
-                        />
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>Shareholder's Name</Label>
+                          <Input
+                            value={shareholder.name}
+                            onChange={(e) => handleShareholderChange(index, 'name', e.target.value)}
+                            placeholder="Enter Shareholder's Name"
+                            className="focus:border-blue-600 focus:ring-blue-600"
+                          />
+                        </div>
+                        <div>
+                          <Label>KRA PIN Number</Label>
+                          <Input
+                            value={shareholder.kraPinNumber}
+                            onChange={(e) => handleShareholderChange(index, 'kraPinNumber', e.target.value)}
+                            placeholder="Enter KRA PIN Number"
+                            className="focus:border-blue-600 focus:ring-blue-600"
+                          />
+                        </div>
+                        <div>
+                          <Label>Nationality</Label>
+                          <Input
+                            value={shareholder.nationality}
+                            onChange={(e) => handleShareholderChange(index, 'nationality', e.target.value)}
+                            placeholder="Enter Nationality"
+                            className="focus:border-blue-600 focus:ring-blue-600"
+                          />
+                        </div>
+                        <div>
+                          <Label>Shares</Label>
+                          <Input
+                            value={shareholder.shares}
+                            onChange={(e) => handleShareholderChange(index, 'shares', e.target.value)}
+                            placeholder="Enter Number of Shares"
+                            className="focus:border-blue-600 focus:ring-blue-600"
+                          />
+                        </div>
                       </div>
                     </div>
                   ))}
-                  
+
                   <Button
                     type="button"
-                    variant="ghost"
-                    className="flex items-center gap-2 text-blue-600"
+                    variant="outline"
                     onClick={addShareholder}
+                    className="w-full text-blue-600 hover:bg-blue-50 hover:border-blue-600"
                   >
-                    <Plus className="h-4 w-4" />
+                    <Plus className="h-4 w-4 mr-2 text-blue-600" />
                     Add another Shareholder
                   </Button>
-                </div>
+                </>
               )}
-            </div>
 
-            <div className="mt-6 flex justify-end gap-3">
-              <Button variant="outline">Save Draft</Button>
-              <Button onClick={goToNextStep}>Save and Continue</Button>
+              <div className="flex justify-end gap-3 mt-6">
+                <Button 
+                  variant="outline" 
+                  onClick={handleBack}
+                  className="hover:bg-blue-50 hover:text-blue-600 hover:border-blue-600"
+                >
+                  Previous Step
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => {
+                    saveProgress()
+                    router.push('/dashboard')
+                  }}
+                  className="hover:bg-blue-50 hover:text-blue-600 hover:border-blue-600"
+                >
+                  Save Draft
+                </Button>
+                <Button 
+                  onClick={handleNext}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  Next Step
+                </Button>
+              </div>
             </div>
           </div>
         </CardContent>

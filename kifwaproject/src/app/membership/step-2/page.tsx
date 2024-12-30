@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Upload, Check, X } from 'lucide-react'
 import { useMembership } from '@/contexts/membership-context'
+import { StepIndicator } from '@/components/StepIndicator'
+import { useRouter } from 'next/navigation'
 
 const documents = [
   {
@@ -57,30 +59,56 @@ const steps = [
 ]
 
 export default function DocumentUploadStep() {
+  const router = useRouter();
   const { 
-    stepStatuses, 
-    documents: uploadedDocuments, 
-    updateDocument, 
-    goToNextStep 
-  } = useMembership()
+    stepStatuses,
+    companyDetails,
+    updateCompanyDetails,
+    saveProgress,
+    setCurrentStep
+  } = useMembership();
+
+  useEffect(() => {
+    setCurrentStep(2);
+  }, [setCurrentStep]);
+
+  const handleCancel = () => {
+    if (confirm('Are you sure you want to exit? Your progress will be saved.')) {
+      saveProgress();
+      router.push('/dashboard');
+    }
+  };
+
+  const handlePrevious = () => {
+    saveProgress();
+    router.push('/membership/step-1');
+  };
+
+  const handleNext = () => {
+    saveProgress();
+    router.push('/membership/step-3');
+  };
 
   const handleFileUpload = async (documentId: string, file: File) => {
-    updateDocument(documentId, {
+    const newDocuments = { ...companyDetails.documents }
+    newDocuments[documentId] = {
       name: file.name,
       progress: 0,
       uploaded: false,
       file
-    })
+    }
+    updateCompanyDetails({ documents: newDocuments })
 
     // Simulate upload progress
     for (let progress = 0; progress <= 100; progress += 10) {
       await new Promise(resolve => setTimeout(resolve, 200))
-      updateDocument(documentId, {
+      newDocuments[documentId] = {
         name: file.name,
         progress,
         uploaded: progress === 100,
         file
-      })
+      }
+      updateCompanyDetails({ documents: newDocuments })
     }
   }
 
@@ -97,57 +125,28 @@ export default function DocumentUploadStep() {
   }
 
   const allDocumentsUploaded = documents.every(
-    doc => uploadedDocuments[doc.id]?.uploaded
+    doc => companyDetails.documents[doc.id]?.uploaded
   )
 
   useEffect(() => {
     if (allDocumentsUploaded) {
-      const timer = setTimeout(goToNextStep, 1000)
+      const timer = setTimeout(saveProgress, 1000)
       return () => clearTimeout(timer)
     }
-  }, [allDocumentsUploaded, goToNextStep])
+  }, [allDocumentsUploaded, saveProgress])
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">
       <Card className="mx-auto max-w-6xl">
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Membership Application</CardTitle>
-          <Button variant="ghost" size="icon">
+          <CardTitle>Attach Company Documents</CardTitle>
+          <Button variant="ghost" size="icon" onClick={handleCancel}>
             <X className="h-4 w-4" />
           </Button>
         </CardHeader>
         <CardContent className="flex gap-8">
-          {/* Steps Sidebar */}
-          <div className="w-64 shrink-0">
-            <div className="space-y-1">
-              {steps.map((step) => (
-                <div
-                  key={step.number}
-                  className={`flex items-center gap-3 rounded-lg p-3 text-sm ${
-                    stepStatuses[step.number]?.active ? 'bg-blue-50 text-blue-600' :
-                    stepStatuses[step.number]?.completed ? 'text-blue-600' : 'text-gray-500'
-                  }`}
-                >
-                  <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
-                    stepStatuses[step.number]?.completed ? 'bg-blue-600 text-white' :
-                    stepStatuses[step.number]?.active ? 'border-2 border-blue-600 text-blue-600' :
-                    'border-2 border-gray-300'
-                  }`}>
-                    {stepStatuses[step.number]?.completed ? (
-                      <Check className="h-4 w-4" />
-                    ) : (
-                      step.number
-                    )}
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="font-medium">Step {step.number}</span>
-                    <span className="text-xs">{step.title}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
+          <StepIndicator currentStep={2} />
+          
           {/* Main Content */}
           <div className="flex-1">
             <h2 className="mb-6 text-xl font-semibold">Attach Company Documents</h2>
@@ -158,7 +157,7 @@ export default function DocumentUploadStep() {
                   className="space-y-2"
                 >
                   <div className="text-sm font-medium">{doc.title}</div>
-                  {!uploadedDocuments[doc.id] ? (
+                  {!companyDetails.documents[doc.id] ? (
                     <div
                       onDragOver={handleDragOver}
                       onDrop={(e) => handleDrop(e, doc.id)}
@@ -166,23 +165,9 @@ export default function DocumentUploadStep() {
                     >
                       <Upload className="mb-2 h-6 w-6 text-gray-400" />
                       <div className="text-center">
-                        <button
-                          onClick={() => {
-                            const input = document.createElement('input')
-                            input.type = 'file'
-                            input.accept = '.pdf'
-                            input.onchange = async (e) => {
-                              const file = (e.target as HTMLInputElement).files?.[0]
-                              if (file) {
-                                await handleFileUpload(doc.id, file)
-                              }
-                            }
-                            input.click()
-                          }}
-                          className="text-blue-600 hover:underline"
-                        >
+                        <span className="text-blue-600 hover:underline cursor-pointer">
                           Click to upload
-                        </button>
+                        </span>
                         <span className="text-gray-500"> or drag and drop</span>
                       </div>
                       <p className="mt-1 text-xs text-gray-500">
@@ -196,31 +181,39 @@ export default function DocumentUploadStep() {
                           <div className="rounded bg-red-100 px-2 py-1 text-xs text-red-600">
                             {doc.fileType}
                           </div>
-                          <span className="text-sm">{uploadedDocuments[doc.id]?.name}</span>
+                          <span className="text-sm">{companyDetails.documents[doc.id]?.name}</span>
                         </div>
-                        {uploadedDocuments[doc.id]?.uploaded && (
+                        {companyDetails.documents[doc.id]?.uploaded && (
                           <Check className="h-4 w-4 text-green-600" />
                         )}
                       </div>
                       <Progress
-                        value={uploadedDocuments[doc.id]?.progress}
+                        value={companyDetails.documents[doc.id]?.progress}
                         className="mt-2"
                       />
                       <div className="mt-1 text-right text-xs text-gray-500">
-                        {uploadedDocuments[doc.id]?.progress}%
+                        {companyDetails.documents[doc.id]?.progress}%
                       </div>
                     </div>
                   )}
                 </div>
               ))}
             </div>
-            <div className="mt-6 flex justify-end gap-3">
-              <Button variant="outline">Save Draft</Button>
+            <div className="flex justify-end gap-3 mt-6">
+              <Button variant="outline" onClick={handlePrevious}>
+                Previous Step
+              </Button>
+              <Button variant="outline" onClick={() => {
+                saveProgress();
+                router.push('/dashboard');
+              }}>
+                Save Draft
+              </Button>
               <Button 
-                disabled={!allDocumentsUploaded}
-                onClick={goToNextStep}
+                onClick={handleNext}
+                // disabled={!allDocumentsUploaded}
               >
-                Save and Continue
+                Next Step
               </Button>
             </div>
           </div>

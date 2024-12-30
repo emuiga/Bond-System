@@ -1,189 +1,202 @@
 'use client'
 
-import { useState } from 'react'
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState, useEffect } from 'react'
+import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Check, X } from 'lucide-react'
+import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Textarea } from "@/components/ui/textarea"
+import { useRouter } from 'next/navigation'
+import { StepIndicator } from '@/components/StepIndicator'
 import { useMembership } from '@/contexts/membership-context'
+import { X, Plus, Trash2 } from 'lucide-react'
 
-interface RefereeDetails {
+interface Referee {
+  id: number
   name: string
   company: string
-  address: string
-  phone: string
+  position: string
+  phoneNumber: string
+  email: string
+}
+
+const DEFAULT_REFEREE: Referee = {
+  id: 1,
+  name: '',
+  company: '',
+  position: '',
+  phoneNumber: '',
+  email: ''
 }
 
 export default function RefereesDeclarationStep() {
-  const { 
-    stepStatuses, 
-    goToNextStep 
-  } = useMembership()
+  const router = useRouter()
+  const { companyDetails, updateCompanyDetails, saveProgress, setCurrentStep } = useMembership()
+  const [referees, setReferees] = useState<Referee[]>([DEFAULT_REFEREE])
+  const [declaration, setDeclaration] = useState(false)
 
-  const [proposer, setProposer] = useState<RefereeDetails>({
-    name: '',
-    company: '',
-    address: '',
-    phone: ''
-  })
+  useEffect(() => {
+    setCurrentStep(6)
+  }, [setCurrentStep])
 
-  const [seconder, setSeconder] = useState<RefereeDetails>({
-    name: '',
-    company: '',
-    address: '',
-    phone: ''
-  })
+  const handleRefereeChange = (index: number, field: string, value: string) => {
+    const updatedReferees = referees.map((referee, i) => {
+      if (i === index) {
+        return { ...referee, [field]: value }
+      }
+      return referee
+    })
+    setReferees(updatedReferees)
+    updateCompanyDetails({ referees: updatedReferees })
+  }
 
-  const steps = [
-    { number: 1, title: 'Company Details' },
-    { number: 2, title: 'Attach Company Documents' },
-    { number: 3, title: 'Directors\' Details' },
-    { number: 4, title: 'Staff\'s Details' },
-    { number: 5, title: 'Shareholder/Partner Details' },
-    { number: 6, title: 'Referees and Declaration' },
-    { number: 7, title: 'Make Payment' }
-  ]
+  const addReferee = () => {
+    const newReferee = {
+      id: referees.length + 1,
+      name: '',
+      company: '',
+      position: '',
+      phoneNumber: '',
+      email: ''
+    }
+    setReferees([...referees, newReferee])
+  }
+
+  const removeReferee = (index: number) => {
+    if (referees.length > 1) {
+      const updatedReferees = referees.filter((_, i) => i !== index)
+      setReferees(updatedReferees)
+      updateCompanyDetails({ referees: updatedReferees })
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">
       <Card className="mx-auto max-w-6xl">
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Membership Application</CardTitle>
-          <Button variant="ghost" size="icon">
-            <X className="h-4 w-4" />
+          <CardTitle>Referees and Declaration</CardTitle>
+          <Button variant="ghost" size="icon" onClick={() => router.push('/dashboard')}>
+            <X className="h-5 w-5" />
           </Button>
         </CardHeader>
         <CardContent className="flex gap-8">
-          {/* Steps Sidebar */}
-          <div className="w-64 shrink-0">
-            <div className="space-y-1">
-              {steps.map((step) => (
-                <div
-                  key={step.number}
-                  className={`flex items-center gap-3 rounded-lg p-3 text-sm ${
-                    stepStatuses[step.number]?.active ? 'bg-blue-50 text-blue-600' :
-                    stepStatuses[step.number]?.completed ? 'text-blue-600' : 'text-gray-500'
-                  }`}
-                >
-                  <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
-                    stepStatuses[step.number]?.completed ? 'bg-blue-600 text-white' :
-                    stepStatuses[step.number]?.active ? 'border-2 border-blue-600 text-blue-600' :
-                    'border-2 border-gray-300'
-                  }`}>
-                    {stepStatuses[step.number]?.completed ? (
-                      <Check className="h-4 w-4" />
-                    ) : (
-                      step.number
-                    )}
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="font-medium">Step {step.number}</span>
-                    <span className="text-xs">{step.title}</span>
-                  </div>
+          <StepIndicator currentStep={6} />
+          
+          <div className="flex-1 space-y-6">
+            {referees.map((referee, index) => (
+              <div key={referee.id} className="space-y-4 p-4 border rounded-lg">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-medium">Referee {index + 1}</h3>
+                  {referees.length > 1 && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeReferee(index)}
+                    >
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
+                  )}
                 </div>
-              ))}
-            </div>
-          </div>
 
-          {/* Main Content */}
-          <div className="flex-1">
-            <h2 className="mb-2 text-xl font-semibold">Referees and Declaration</h2>
-            <p className="mb-6 text-sm text-gray-500">
-              Give two Directors or Sole Proprietors from member organisations.
-            </p>
-
-            <div className="space-y-8">
-              {/* Proposer Section */}
-              <div className="space-y-4">
-                <h3 className="font-medium text-gray-700">Proposer</h3>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="proposer-name">Name</Label>
-                    <Input 
-                      id="proposer-name"
-                      value={proposer.name}
-                      onChange={(e) => setProposer({...proposer, name: e.target.value})}
-                      placeholder="Enter proposer's name"
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Name</label>
+                    <Input
+                      value={referee.name}
+                      onChange={(e) => handleRefereeChange(index, 'name', e.target.value)}
+                      placeholder="Enter referee's name"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="proposer-company">Company</Label>
-                    <Input 
-                      id="proposer-company"
-                      value={proposer.company}
-                      onChange={(e) => setProposer({...proposer, company: e.target.value})}
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Company</label>
+                    <Input
+                      value={referee.company}
+                      onChange={(e) => handleRefereeChange(index, 'company', e.target.value)}
                       placeholder="Enter company name"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="proposer-address">Address</Label>
-                    <Input 
-                      id="proposer-address"
-                      value={proposer.address}
-                      onChange={(e) => setProposer({...proposer, address: e.target.value})}
-                      placeholder="Enter address"
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Position</label>
+                    <Input
+                      value={referee.position}
+                      onChange={(e) => handleRefereeChange(index, 'position', e.target.value)}
+                      placeholder="Enter position"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="proposer-phone">Phone</Label>
-                    <Input 
-                      id="proposer-phone"
-                      value={proposer.phone}
-                      onChange={(e) => setProposer({...proposer, phone: e.target.value})}
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Phone Number</label>
+                    <Input
+                      value={referee.phoneNumber}
+                      onChange={(e) => handleRefereeChange(index, 'phoneNumber', e.target.value)}
                       placeholder="Enter phone number"
                     />
                   </div>
                 </div>
-              </div>
 
-              {/* Seconder Section */}
-              <div className="space-y-4">
-                <h3 className="font-medium text-gray-700">Seconder</h3>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="seconder-name">Name</Label>
-                    <Input 
-                      id="seconder-name"
-                      value={seconder.name}
-                      onChange={(e) => setSeconder({...seconder, name: e.target.value})}
-                      placeholder="Enter seconder's name"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="seconder-company">Company</Label>
-                    <Input 
-                      id="seconder-company"
-                      value={seconder.company}
-                      onChange={(e) => setSeconder({...seconder, company: e.target.value})}
-                      placeholder="Enter company name"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="seconder-address">Address</Label>
-                    <Input 
-                      id="seconder-address"
-                      value={seconder.address}
-                      onChange={(e) => setSeconder({...seconder, address: e.target.value})}
-                      placeholder="Enter address"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="seconder-phone">Phone</Label>
-                    <Input 
-                      id="seconder-phone"
-                      value={seconder.phone}
-                      onChange={(e) => setSeconder({...seconder, phone: e.target.value})}
-                      placeholder="Enter phone number"
-                    />
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Email</label>
+                  <Input
+                    value={referee.email}
+                    onChange={(e) => handleRefereeChange(index, 'email', e.target.value)}
+                    placeholder="Enter email address"
+                    type="email"
+                  />
                 </div>
+              </div>
+            ))}
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={addReferee}
+              className="w-full text-blue-600 hover:bg-blue-50 hover:border-blue-600"
+            >
+              <Plus className="h-4 w-4 mr-2 text-blue-600" />
+              Add Another Referee
+            </Button>
+
+            <div className="mt-8 space-y-4">
+              <h3 className="text-lg font-medium">Declaration</h3>
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="declaration" 
+                  checked={declaration}
+                  onCheckedChange={(checked) => {
+                    setDeclaration(checked as boolean)
+                    updateCompanyDetails({ declaration: checked as boolean })
+                  }}
+                />
+                <label htmlFor="declaration" className="text-sm">
+                  I declare that the information provided is true and accurate to the best of my knowledge.
+                </label>
               </div>
             </div>
 
-            <div className="mt-6 flex justify-end gap-3">
-              <Button variant="outline">Save Draft</Button>
-              <Button onClick={goToNextStep}>Save and Continue</Button>
+            <div className="flex justify-end gap-3 mt-6">
+              <Button variant="outline" onClick={() => {
+                saveProgress()
+                router.push('/membership/step-5')
+              }}>
+                Previous Step
+              </Button>
+              <Button variant="outline" onClick={() => {
+                saveProgress()
+                router.push('/dashboard')
+              }}>
+                Save Draft
+              </Button>
+              <Button 
+                onClick={() => {
+                  saveProgress()
+                  router.push('/membership/step-7')
+                }}
+                disabled={!declaration}
+              >
+                Next Step
+              </Button>
             </div>
           </div>
         </CardContent>

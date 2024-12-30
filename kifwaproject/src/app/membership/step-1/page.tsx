@@ -1,250 +1,358 @@
 'use client'
 
 import { useState } from 'react'
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
+import { useRouter } from 'next/navigation'
+import { StepIndicator } from '@/components/StepIndicator'
 import { Checkbox } from "@/components/ui/checkbox"
-import { Check, X } from 'lucide-react'
-import { useMembership } from '@/contexts/membership-context'
+import { Label } from "@/components/ui/label"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useToast } from "@/components/ui/use-toast"
 
-interface CompanyDetails {
-  companyName: string
-  kraPin: string
-  registrationNumber: string
-  authorizedCapital: string
-  paidUpCapital: string
-  town: string
-  streetRoad: string
-  building: string
-  floor: string
-  isPrincipalPlace: boolean
-  bankBranch: string
-  bankTown: string
+interface FormData {
+  companyName: string;
+  kraPin: string;
+  regNumber: string;
+  authorisedCapital: string;
+  paidUpCapital: string;
+  town: string;
+  streetRoad: string;
+  building: string;
+  floor: string;
+  isPrincipalPlace: boolean;
+  bankBranch: string;
+  bankTown: string;
 }
 
-export default function CompanyDetailsStep() {
-  const { 
-    stepStatuses, 
-    goToNextStep 
-  } = useMembership()
+const initialFormData: FormData = {
+  companyName: '',
+  kraPin: '',
+  regNumber: '',
+  authorisedCapital: '',
+  paidUpCapital: '',
+  town: '',
+  streetRoad: '',
+  building: '',
+  floor: '',
+  isPrincipalPlace: false,
+  bankBranch: '',
+  bankTown: '',
+};
 
-  const [details, setDetails] = useState<CompanyDetails>({
-    companyName: '',
-    kraPin: '',
-    registrationNumber: '',
-    authorizedCapital: '',
-    paidUpCapital: '',
-    town: '',
-    streetRoad: '',
-    building: '',
-    floor: '',
-    isPrincipalPlace: false,
-    bankBranch: '',
-    bankTown: ''
-  })
+export default function Step1() {
+  const router = useRouter()
+  const { toast } = useToast()
 
-  const steps = [
-    { number: 1, title: 'Company Details' },
-    { number: 2, title: 'Attach Company Documents' },
-    { number: 3, title: 'Directors\' Details' },
-    { number: 4, title: 'Staff\'s Details' },
-    { number: 5, title: 'Shareholder/Partner Details' },
-    { number: 6, title: 'Referees and Declaration' },
-    { number: 7, title: 'Make Payment' }
-  ]
+  const [formData, setFormData] = useState<FormData>(initialFormData)
+  const [errors, setErrors] = useState<Partial<FormData>>({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleInputChange = (field: keyof CompanyDetails, value: string | boolean) => {
-    setDetails(prev => ({
-      ...prev,
-      [field]: value
-    }))
+  const validateForm = () => {
+    const newErrors: Partial<FormData> = {};
+    
+    if (!formData.companyName.trim()) {
+      newErrors.companyName = 'Company name is required'
+    }
+    
+    if (!formData.kraPin.trim()) {
+      newErrors.kraPin = 'KRA PIN is required'
+    } else if (!/^[A-Z][0-9]{9}[A-Z]$/.test(formData.kraPin)) {
+      newErrors.kraPin = 'Invalid KRA PIN format'
+    }
+    
+    if (!formData.regNumber.trim()) {
+      newErrors.regNumber = 'Registration number is required'
+    }
+    
+    if (!formData.authorisedCapital.trim()) {
+      newErrors.authorisedCapital = 'Authorised capital is required'
+    } else if (isNaN(formData.authorisedCapital)) {
+      newErrors.authorisedCapital = 'Must be a valid number'
+    }
+    
+    if (!formData.paidUpCapital.trim()) {
+      newErrors.paidUpCapital = 'Paid up capital is required'
+    } else if (isNaN(formData.paidUpCapital)) {
+      newErrors.paidUpCapital = 'Must be a valid number'
+    }
+    
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
   }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: undefined
+      }));
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    try {
+      // Save to local storage for now - replace with API call
+      localStorage.setItem('membershipStep1Draft', JSON.stringify(formData))
+      toast({
+        title: "Draft saved",
+        description: "Your progress has been saved successfully.",
+      })
+    } catch (error) {
+      toast({
+        title: "Error saving draft",
+        description: "There was a problem saving your progress.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleNext = async () => {
+    if (!validateForm()) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields correctly.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      // Save data (replace with your API call)
+      localStorage.setItem('membershipStep1', JSON.stringify(formData))
+      router.push('/membership/step-2')
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "There was a problem saving your information. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  // Load draft data on mount
+  useState(() => {
+    const savedDraft = localStorage.getItem('membershipStep1Draft')
+    if (savedDraft) {
+      setFormData(JSON.parse(savedDraft))
+    }
+  }, [])
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">
       <Card className="mx-auto max-w-6xl">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Membership Application</CardTitle>
-          <Button variant="ghost" size="icon">
-            <X className="h-4 w-4" />
-          </Button>
+        <CardHeader>
+          <CardTitle>Company Details</CardTitle>
         </CardHeader>
-        <CardContent className="flex gap-8">
-          {/* Steps Sidebar */}
-          <div className="w-64 shrink-0">
-            <div className="space-y-1">
-              {steps.map((step) => (
-                <div
-                  key={step.number}
-                  className={`flex items-center gap-3 rounded-lg p-3 text-sm ${
-                    stepStatuses[step.number]?.active ? 'bg-blue-50 text-blue-600' :
-                    stepStatuses[step.number]?.completed ? 'text-blue-600' : 'text-gray-500'
-                  }`}
-                >
-                  <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
-                    stepStatuses[step.number]?.completed ? 'bg-blue-600 text-white' :
-                    stepStatuses[step.number]?.active ? 'border-2 border-blue-600 text-blue-600' :
-                    'border-2 border-gray-300'
-                  }`}>
-                    {stepStatuses[step.number]?.completed ? (
-                      <Check className="h-4 w-4" />
-                    ) : (
-                      step.number
-                    )}
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="font-medium">Step {step.number}</span>
-                    <span className="text-xs">{step.title}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Main Content */}
-          <div className="flex-1">
-            <h2 className="mb-6 text-xl font-semibold">Company Details</h2>
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="company-name">Company/Firm Name</Label>
-                <Input 
-                  id="company-name"
-                  value={details.companyName}
-                  onChange={(e) => handleInputChange('companyName', e.target.value)}
+        <CardContent>
+          <div className="flex gap-8">
+            <StepIndicator currentStep={1} />
+            
+            <div className="flex-1 space-y-6">
+              <div>
+                <Label htmlFor="companyName">
+                  Company/Firm Name <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="companyName"
+                  name="companyName"
                   placeholder="Enter Company Name"
+                  value={formData.companyName}
+                  onChange={handleInputChange}
+                  className={errors.companyName ? "border-red-500" : ""}
                 />
+                {errors.companyName && (
+                  <p className="text-red-500 text-sm mt-1">{errors.companyName}</p>
+                )}
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="kra-pin">KRA PIN Number</Label>
-                  <Input 
-                    id="kra-pin"
-                    value={details.kraPin}
-                    onChange={(e) => handleInputChange('kraPin', e.target.value)}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="kraPin">
+                    KRA PIN Number <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="kraPin"
+                    name="kraPin"
                     placeholder="Enter KRA PIN Number"
+                    value={formData.kraPin}
+                    onChange={handleInputChange}
+                    className={errors.kraPin ? "border-red-500" : ""}
                   />
+                  {errors.kraPin && (
+                    <p className="text-red-500 text-sm mt-1">{errors.kraPin}</p>
+                  )}
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="reg-number">Registration Certificate Number</Label>
-                  <Input 
-                    id="reg-number"
-                    value={details.registrationNumber}
-                    onChange={(e) => handleInputChange('registrationNumber', e.target.value)}
-                    placeholder="Enter Registration Number Number"
+                
+                <div>
+                  <Label htmlFor="regNumber">
+                    Registration Certificate Number <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="regNumber"
+                    name="regNumber"
+                    placeholder="Enter Registration Number"
+                    value={formData.regNumber}
+                    onChange={handleInputChange}
+                    className={errors.regNumber ? "border-red-500" : ""}
                   />
+                  {errors.regNumber && (
+                    <p className="text-red-500 text-sm mt-1">{errors.regNumber}</p>
+                  )}
                 </div>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="authorized-capital">Authorised Capital</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">Ksh</span>
-                    <Input 
-                      id="authorized-capital"
-                      value={details.authorizedCapital}
-                      onChange={(e) => handleInputChange('authorizedCapital', e.target.value)}
-                      className="pl-12"
-                      placeholder="Enter amount"
-                    />
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="authorisedCapital">
+                    Authorised Capital <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="authorisedCapital"
+                    name="authorisedCapital"
+                    placeholder="Ksh"
+                    value={formData.authorisedCapital}
+                    onChange={handleInputChange}
+                    className={errors.authorisedCapital ? "border-red-500" : ""}
+                  />
+                  {errors.authorisedCapital && (
+                    <p className="text-red-500 text-sm mt-1">{errors.authorisedCapital}</p>
+                  )}
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="paid-capital">Paid Up Capital</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">Ksh</span>
-                    <Input 
-                      id="paid-capital"
-                      value={details.paidUpCapital}
-                      onChange={(e) => handleInputChange('paidUpCapital', e.target.value)}
-                      className="pl-12"
-                      placeholder="Enter amount"
-                    />
-                  </div>
+                
+                <div>
+                  <Label htmlFor="paidUpCapital">
+                    Paid Up Capital <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="paidUpCapital"
+                    name="paidUpCapital"
+                    placeholder="Ksh"
+                    value={formData.paidUpCapital}
+                    onChange={handleInputChange}
+                    className={errors.paidUpCapital ? "border-red-500" : ""}
+                  />
+                  {errors.paidUpCapital && (
+                    <p className="text-red-500 text-sm mt-1">{errors.paidUpCapital}</p>
+                  )}
                 </div>
               </div>
 
               <div>
-                <h3 className="mb-4 font-medium">Physical Address</h3>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
+                <h3 className="text-lg font-medium mb-4">Physical Address</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
                     <Label htmlFor="town">Town</Label>
-                    <Input 
+                    <Input
                       id="town"
-                      value={details.town}
-                      onChange={(e) => handleInputChange('town', e.target.value)}
+                      name="town"
                       placeholder="Enter Town"
+                      value={formData.town}
+                      onChange={handleInputChange}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="street">Street/Road</Label>
-                    <Input 
-                      id="street"
-                      value={details.streetRoad}
-                      onChange={(e) => handleInputChange('streetRoad', e.target.value)}
+                  
+                  <div>
+                    <Label htmlFor="streetRoad">Street/Road</Label>
+                    <Input
+                      id="streetRoad"
+                      name="streetRoad"
                       placeholder="Enter Street/Road"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="building">Building</Label>
-                    <Input 
-                      id="building"
-                      value={details.building}
-                      onChange={(e) => handleInputChange('building', e.target.value)}
-                      placeholder="Enter Building"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="floor">Floor</Label>
-                    <Input 
-                      id="floor"
-                      value={details.floor}
-                      onChange={(e) => handleInputChange('floor', e.target.value)}
-                      placeholder="Enter Floor"
+                      value={formData.streetRoad}
+                      onChange={handleInputChange}
                     />
                   </div>
                 </div>
-                <div className="mt-4 flex items-center space-x-2">
-                  <Checkbox 
-                    id="principal"
-                    checked={details.isPrincipalPlace}
-                    onCheckedChange={(checked: boolean) => handleInputChange('isPrincipalPlace', checked as boolean)}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <Label htmlFor="building">Building</Label>
+                    <Input
+                      id="building"
+                      name="building"
+                      placeholder="Enter Building"
+                      value={formData.building}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="floor">Floor</Label>
+                    <Input
+                      id="floor"
+                      name="floor"
+                      placeholder="Enter Floor"
+                      value={formData.floor}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2 mt-4">
+                  <Checkbox
+                    id="isPrincipalPlace"
+                    checked={formData.isPrincipalPlace}
+                    onCheckedChange={(checked) => 
+                      setFormData(prev => ({...prev, isPrincipalPlace: checked}))
+                    }
                   />
-                  <Label htmlFor="principal">This address is also my principal place of business</Label>
+                  <Label htmlFor="isPrincipalPlace">
+                    This address is also my principal place of business
+                  </Label>
                 </div>
               </div>
 
               <div>
-                <h3 className="mb-4 font-medium">Bankers</h3>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="bank-branch">Branch</Label>
-                    <Input 
-                      id="bank-branch"
-                      value={details.bankBranch}
-                      onChange={(e) => handleInputChange('bankBranch', e.target.value)}
+                <h3 className="text-lg font-medium mb-4">Bankers</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="bankBranch">Branch</Label>
+                    <Input
+                      id="bankBranch"
+                      name="bankBranch"
                       placeholder="Enter Branch"
+                      value={formData.bankBranch}
+                      onChange={handleInputChange}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="bank-town">Town</Label>
-                    <Input 
-                      id="bank-town"
-                      value={details.bankTown}
-                      onChange={(e) => handleInputChange('bankTown', e.target.value)}
+                  
+                  <div>
+                    <Label htmlFor="bankTown">Town</Label>
+                    <Input
+                      id="bankTown"
+                      name="bankTown"
                       placeholder="Enter Town"
+                      value={formData.bankTown}
+                      onChange={handleInputChange}
                     />
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div className="mt-6 flex justify-end gap-3">
-              <Button variant="outline">Save Draft</Button>
-              <Button onClick={goToNextStep}>Save and Continue</Button>
+              <div className="flex justify-end gap-3 mt-6">
+                <Button 
+                  variant="outline" 
+                  onClick={handleSaveDraft}
+                >
+                  Save Draft
+                </Button>
+                <Button 
+                  onClick={handleNext}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? "Saving..." : "Next Step"}
+                </Button>
+              </div>
             </div>
           </div>
         </CardContent>
